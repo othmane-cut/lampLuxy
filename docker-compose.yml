@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  supabase-db:
+    image: supabase/postgres:15.1.0.147
+    ports:
+      - "54332:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  supabase-studio:
+    image: supabase/studio:latest
+    ports:
+      - "54333:3000"
+    environment:
+      SUPABASE_URL: http://localhost:54321
+      STUDIO_PG_META_URL: http://localhost:54332
+
+volumes:
+  postgres-data:

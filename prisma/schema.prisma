@@ -1,0 +1,117 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------
+// CLIENTS
+// -----------------------------------------
+model Client {
+  id         String     @id @default(cuid())
+  full_name  String
+  email      String     @unique
+  phone      String
+  city       String
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+
+  commands   Command[]
+  feedbacks  Feedback[]
+
+  @@map("clients")
+}
+
+// -----------------------------------------
+// PRODUCTS
+// -----------------------------------------
+model Product {
+  id               String    @id @default(cuid())
+  name             String
+  description      String
+  long_description String?
+  price            Decimal   @db.Decimal(10, 2)
+  image_url        String
+  image_gallery    String[]  // Array of image URLs
+  stock            Int       @default(0)
+  is_active        Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  commands         Command[]
+
+  @@map("products")
+}
+
+// -----------------------------------------
+// COMMANDS (ORDERS)
+// -----------------------------------------
+model Command {
+  id          String        @id @default(cuid())
+  client_id   String
+  product_id  String
+  quantity    Int
+  total_price Decimal       @db.Decimal(10, 2)
+  status      CommandStatus @default(PENDING)
+  message     String?
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
+
+  client      Client        @relation(fields: [client_id], references: [id])
+  product     Product       @relation(fields: [product_id], references: [id])
+
+  @@map("commands")
+}
+
+enum CommandStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+// -----------------------------------------
+// FEEDBACKS
+// -----------------------------------------
+model Feedback {
+  id         String   @id @default(cuid())
+  client_id  String
+  message    String
+  created_at DateTime @default(now())
+
+  client     Client   @relation(fields: [client_id], references: [id])
+
+  @@map("feedbacks")
+}
+
+// -----------------------------------------
+// ADMINS
+// -----------------------------------------
+model Admin {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password_hash String
+  created_at    DateTime @default(now())
+
+  @@map("admins")
+}
+
+// -----------------------------------------
+// EMAIL CAMPAIGNS
+// -----------------------------------------
+model Campaign {
+  id              String   @id @default(cuid())
+  subject         String
+  body            String
+  recipients_count Int     @default(0)
+  status          String   @default("sent")
+  sent_at         DateTime @default(now())
+
+  @@map("campaigns")
+}
