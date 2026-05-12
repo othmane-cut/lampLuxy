@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decrypt } from "@/lib/auth";
+import { createClient } from "@/utils/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  
+  // Initialize Supabase client and refresh session
+  let response = createClient(request);
 
   // Protect admin routes
   if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
@@ -14,13 +18,13 @@ export async function middleware(request: NextRequest) {
 
     try {
       await decrypt(session);
-      return NextResponse.next();
+      return response; // Return the response from Supabase middleware
     } catch {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
