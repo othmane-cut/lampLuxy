@@ -15,6 +15,17 @@ export async function POST(request: Request) {
 
     let authenticated = false;
     
+    // Explicit DB check
+    try {
+      await prisma.$connect();
+    } catch (dbError: any) {
+      console.error("Database connection failed:", dbError);
+      return NextResponse.json({ 
+        error: "Database Connection Error", 
+        details: "Could not connect to the database. Please check if your Docker container is running." 
+      }, { status: 503 });
+    }
+
     const admin = await prisma.admin.findUnique({
       where: { email },
     });

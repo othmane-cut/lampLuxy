@@ -38,7 +38,12 @@ export const updateSession = async (request: NextRequest) => {
   );
 
   // This will refresh session if expired - important for SSR
-  await supabase.auth.getUser();
+  try {
+    await supabase.auth.getUser();
+  } catch (e) {
+    // If Supabase is down or misconfigured, we don't want to crash the whole app
+    console.error("Supabase middleware error:", e);
+  }
 
   return response;
 };
