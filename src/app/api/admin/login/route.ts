@@ -1,44 +1,60 @@
 import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
-import { login } from "@/lib/auth";
+import { encrypt } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
+    const { email, password } = body;
 
-    // In a real scenario, we check the database
-    // For this academic project, we'll try to find the admin in the database
-    // and fallback to a default if seeding hasn't happened yet (for demo ease)
+    if (!email || !password) {
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
+    }
+
+    let authenticated = false;
     
     const admin = await prisma.admin.findUnique({
       where: { email },
     });
 
     if (admin) {
-      const isPasswordValid = await bcrypt.compare(password, admin.password_hash);
-      if (isPasswordValid) {
-        await login(email);
-        return NextResponse.json({ success: true });
-      }
+      authenticated = await bcrypt.compare(password, admin.password_hash);
     } else {
-        // Fallback for first-time use/demo if database is not seeded
-        // Admin: admin@luxhome.com / admin123!
-        if (email === "admin@luxhome.com" && password === "admin123!") {
-             await login(email);
-             return NextResponse.json({ success: true });
-        }
+      // Fallback for first-time use/demo
+      if (email === "admin@luxhome.com" && password === "admin123!") {
+        authenticated = true;
+      }
+    }
+
+    if (authenticated) {
+      const expires = new Date(Date.now() + 2 * 60 * 60 * 1000);
+      const session = await encrypt({ email, expires });
+
+      const response = NextResponse.json({ success: true });
+      response.cookies.set("session", session, { 
+        expires, 
+        httpOnly: true,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax"
+      });
+      
+      return response;
     }
 
     return NextResponse.json(
       { error: "Invalid email or password" },
       { status: 401 }
     );
-  } catch (error) {
-    console.error("Login error:", error);
+  } catch (error: any) {
+    console.error("Login error details:", {
+      message: error.message,
+      stack: error.stack,
+    });
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: "Internal Server Error", details: error.message },
       { status: 500 }
     );
   }
